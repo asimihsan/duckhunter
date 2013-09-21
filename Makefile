@@ -36,7 +36,7 @@ libglib: ./external/glib/config.status
 	cd external/glib; make
 
 test: duckhunter
-	@valgrind --track-origins=yes --leak-check=full --show-reachable=yes build/makefiles/out/Default/duckhunter
+	@valgrind --track-origins=yes --leak-check=full build/makefiles/out/Default/duckhunter
 
 clean:
 	rm -rf ./build	
