@@ -20,16 +20,19 @@
                 'include',
                 'external/libuv/include',
                 'external/libzmq/include',
+                'external/bstring/bstring',
             ],
             'dependencies': [
                 'external/libuv/uv.gyp:libuv',
             ],
             'link_settings': {
                 'libraries': [
-                    '-lzmq',                    
+                    '-lzmq',
+                    '-lbstring',
                 ],
                 'ldflags': [
-                    '-L../../external/libzmq/src/.libs'
+                    '-L../../external/libzmq/src/.libs',
+                    '-L../../external/bstring/bstring/.libs'
                 ],
             },
         },

@@ -1,6 +1,6 @@
 all: duckhunter
 
-duckhunter: libzmq ./build/makefiles/Makefile
+duckhunter: libzmq libbstring ./build/makefiles/Makefile
 	@make -C ./build/makefiles
 
 ./build/makefiles/Makefile:
@@ -15,6 +15,15 @@ duckhunter: libzmq ./build/makefiles/Makefile
 libzmq: ./external/libzmq/config.status
 	cd external/libzmq; make
 
+./external/bstring/Makefile.in:
+	cd external/bstring; autoreconf -i
+
+./external/bstring/config.status: ./external/bstring/Makefile.in
+	cd external/bstring; ./configure --enable-static --disable-shared --with-pic
+
+libbstring: ./external/bstring/config.status
+	cd external/bstring; make
+
 test: duckhunter
 	@./build/makefiles/out/Default/duckhunter
 
@@ -24,3 +33,5 @@ clean:
 distclean: clean
 	-cd external/libzmq; make distclean
 	cd external/libzmq; rm -f Makefile.in
+	-cd external/bstring; make distclean
+	cd external/bstring; rm -f Makefile.in

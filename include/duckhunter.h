@@ -34,6 +34,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <bstraux.h>
+#include <bstrlib.h>
 #include <uv.h>
 #include <zmq.h>
 
