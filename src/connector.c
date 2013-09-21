@@ -83,10 +83,28 @@ int send_unsubscribe_message(int conn_sock) {
 
 void handle_connector_event(uv_poll_t *req, int status, int events) {
     int rc;
-    nlcn_ev_msg nlcn_msg;
     connector_context_t *context = (connector_context_t *)req;
+    nlcn_ev_msg *nlcn_msg;
 
-    rc = recv(context->sockfd, &nlcn_msg, sizeof(nlcn_msg), 0);
+    struct msghdr msghdr;
+    struct sockaddr_nl addr;
+    struct iovec iov[1];
+    char buf[getpagesize()];
+
+    /* Netlink allows for multi-part messages, and although the process
+       connector doesn't use this let's handle it to future-proof the code. */
+    msghdr.msg_name = &addr;
+    msghdr.msg_namelen = sizeof addr;
+    msghdr.msg_iov = iov;
+    msghdr.msg_iovlen = 1;
+    msghdr.msg_control = NULL;
+    msghdr.msg_controllen = 0;
+    msghdr.msg_flags = 0;
+
+    iov[0].iov_base = buf;
+    iov[0].iov_len = sizeof buf;
+
+    rc = recvmsg(context->sockfd, &msghdr, 0);
     if (rc == 0) {
         return;
     } else if (rc == -1) {
@@ -99,40 +117,56 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
         return;
     }
 
-    if ((nlcn_msg.nl_hdr.nlmsg_type == NLMSG_ERROR) ||
-        (nlcn_msg.nl_hdr.nlmsg_type == NLMSG_NOOP)) {
+    /*  Netlink allows any process to send messages to any other process. We
+        need to make sure that the message actually comes from the kernel. */
+    if (addr.nl_pid != 0)
         return;
-    }
-    if ((nlcn_msg.nl_body.cn_msg.id.idx != CN_IDX_PROC) ||
-        (nlcn_msg.nl_body.cn_msg.id.val != CN_VAL_PROC)) {
-        return;
-    }
 
-    switch(nlcn_msg.nl_body.proc_ev.what) {
-        case PROC_EVENT_FORK:
-            printf("fork: parent pid=%d tgid=%d -> child pid=%d tgid=%d\n",
-                   nlcn_msg.nl_body.proc_ev.event_data.fork.parent_pid,
-                   nlcn_msg.nl_body.proc_ev.event_data.fork.parent_tgid,
-                   nlcn_msg.nl_body.proc_ev.event_data.fork.child_pid,
-                   nlcn_msg.nl_body.proc_ev.event_data.fork.child_tgid);
-            break;
+    /*  Iterate over multiple Netlink messages; currently there will always
+        only be one message, but in the future there may not be. */
+    for (struct nlmsghdr *nlmsghdr = (struct nlmsghdr *)buf;
+         NLMSG_OK (nlmsghdr, rc);
+         nlmsghdr = NLMSG_NEXT (nlmsghdr, rc))
+    {
+        nlcn_msg = (nlcn_ev_msg *)nlmsghdr;
+        if ((nlcn_msg->nl_hdr.nlmsg_type == NLMSG_ERROR) ||
+            (nlcn_msg->nl_hdr.nlmsg_type == NLMSG_NOOP)) {
+            continue;
+        }
 
-        case PROC_EVENT_EXEC:
-            /*
-            printf("exec: process pid=%d tgid=%d\n",
-                   nlcn_msg.nl_body.proc_ev.event_data.exec.process_pid,
-                   nlcn_msg.nl_body.proc_ev.event_data.exec.process_tgid);
-            */
-            break;
+        /*  Make sure the Netlink message comes from the process connector
+            subsystem. */
+        if ((nlcn_msg->nl_body.cn_msg.id.idx != CN_IDX_PROC) ||
+            (nlcn_msg->nl_body.cn_msg.id.val != CN_VAL_PROC)) {
+            continue;
+        }
 
-        case PROC_EVENT_NONE:
-        case PROC_EVENT_UID:
-        case PROC_EVENT_GID:
-        case PROC_EVENT_SID:
-        case PROC_EVENT_PTRACE:
-        case PROC_EVENT_COMM:
-        case PROC_EVENT_EXIT:
-            break;
+        switch(nlcn_msg->nl_body.proc_ev.what) {
+            case PROC_EVENT_FORK:
+                printf("fork: parent pid=%d tgid=%d -> child pid=%d tgid=%d\n",
+                       nlcn_msg->nl_body.proc_ev.event_data.fork.parent_pid,
+                       nlcn_msg->nl_body.proc_ev.event_data.fork.parent_tgid,
+                       nlcn_msg->nl_body.proc_ev.event_data.fork.child_pid,
+                       nlcn_msg->nl_body.proc_ev.event_data.fork.child_tgid);
+                break;
+
+            case PROC_EVENT_EXEC:
+                /*
+                printf("exec: process pid=%d tgid=%d\n",
+                       nlcn_msg->nl_body.proc_ev.event_data.exec.process_pid,
+                       nlcn_msg->nl_body.proc_ev.event_data.exec.process_tgid);
+                */
+                break;
+
+            case PROC_EVENT_NONE:
+            case PROC_EVENT_UID:
+            case PROC_EVENT_GID:
+            case PROC_EVENT_SID:
+            case PROC_EVENT_PTRACE:
+            case PROC_EVENT_COMM:
+            case PROC_EVENT_EXIT:
+                break;
+        }
     }
 }
 
