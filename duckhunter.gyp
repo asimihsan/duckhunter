@@ -12,6 +12,8 @@
                 '-Wall',
                 '-std=c11',
                 '-flto',
+                '-g',
+                '-O0',
             ],
             'sources': [
                 'src/connector.c',

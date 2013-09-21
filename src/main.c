@@ -20,17 +20,19 @@
 #include "duckhunter.h"
 
 uv_loop_t *loop;
+connector_context_t *context;
 
 void on_sigint(uv_signal_t *handle, int signum) {
+    uv_poll_stop(&(context->poll_handle));
+    destroy_connector_context(context);
     uv_stop(loop);
 }
 
 int main() {
     int rc = EXIT_SUCCESS;
     int conn_sock;
-    connector_context_t *context;
     uv_signal_t signal;
-    
+
     loop = uv_default_loop();
     uv_signal_init(loop, &signal);
     uv_signal_start(&signal, on_sigint, SIGINT);
@@ -57,8 +59,6 @@ int main() {
 
 EXIT_LABEL:
     printf("exiting\n");
-    uv_poll_stop(&(context->poll_handle));
     close(conn_sock);
-    destroy_connector_context(context);
     return rc;
 }

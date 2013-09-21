@@ -41,6 +41,7 @@ int create_connector_socket() {
 
 void select_proc_connector(int conn_sock) {
     struct sockaddr_nl addr;
+    memset(&addr, 0, sizeof(addr));
     addr.nl_family = AF_NETLINK;
     addr.nl_pid = getpid();
     addr.nl_groups = CN_IDX_PROC;
@@ -174,6 +175,7 @@ void set_socket_filter(int conn_sock) {
     };
 
     struct sock_fprog fprog;
+    memset(&fprog, 0, sizeof(fprog));
     fprog.filter = filter;
     fprog.len = sizeof filter / sizeof filter[0];
     if (setsockopt(conn_sock, SOL_SOCKET, SO_ATTACH_FILTER,

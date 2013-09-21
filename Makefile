@@ -1,7 +1,9 @@
 all: duckhunter
 
-duckhunter: libzmq libbstring libglib ./build/makefiles/Makefile
+duckhunter: ./build/makefiles/Makefile
 	@make -C ./build/makefiles
+
+deps: libzmq libbstring libglib
 
 ./build/makefiles/Makefile:
 	@gyp duckhunter.gyp --depth=. -f make --generator-output=./build/makefiles -Dlibrary=static_library
@@ -34,7 +36,7 @@ libglib: ./external/glib/config.status
 	cd external/glib; make
 
 test: duckhunter
-	@./build/makefiles/out/Default/duckhunter
+	@valgrind --track-origins=yes --leak-check=full --show-reachable=yes build/makefiles/out/Default/duckhunter
 
 clean:
 	rm -rf ./build	

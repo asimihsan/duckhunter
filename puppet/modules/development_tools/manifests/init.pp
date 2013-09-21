@@ -10,6 +10,7 @@ class development_tools {
         "git",
         "htop",
         "subversion",
+        "valgrind",
         "wget",
     ]
     case $operatingsystem {
