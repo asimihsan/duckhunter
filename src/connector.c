@@ -91,8 +91,10 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
     struct iovec iov[1];
     char buf[getpagesize()];
 
-    /* Netlink allows for multi-part messages, and although the process
-       connector doesn't use this let's handle it to future-proof the code. */
+    /**
+     *  Netlink allows for multi-part messages, and although the process
+     *  connector doesn't use this let's handle it to future-proof the code.
+     */
     msghdr.msg_name = &addr;
     msghdr.msg_namelen = sizeof addr;
     msghdr.msg_iov = iov;
@@ -117,13 +119,17 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
         return;
     }
 
-    /*  Netlink allows any process to send messages to any other process. We
-        need to make sure that the message actually comes from the kernel. */
+    /**
+     *  Netlink allows any process to send messages to any other process. We
+     *  need to make sure that the message actually comes from the kernel.
+     */
     if (addr.nl_pid != 0)
         return;
 
-    /*  Iterate over multiple Netlink messages; currently there will always
-        only be one message, but in the future there may not be. */
+    /**
+     *  Iterate over multiple Netlink messages; currently there will always
+     *  only be one message, but in the future there may not be.
+     */
     for (struct nlmsghdr *nlmsghdr = (struct nlmsghdr *)buf;
          NLMSG_OK (nlmsghdr, rc);
          nlmsghdr = NLMSG_NEXT (nlmsghdr, rc))
@@ -134,8 +140,10 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
             continue;
         }
 
-        /*  Make sure the Netlink message comes from the process connector
-            subsystem. */
+        /**
+         *  Make sure the Netlink message comes from the process connector
+         *  subsystem.
+         */
         if ((nlcn_msg->nl_body.cn_msg.id.idx != CN_IDX_PROC) ||
             (nlcn_msg->nl_body.cn_msg.id.val != CN_VAL_PROC)) {
             continue;
@@ -151,11 +159,9 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
                 break;
 
             case PROC_EVENT_EXEC:
-                /*
                 printf("exec: process pid=%d tgid=%d\n",
                        nlcn_msg->nl_body.proc_ev.event_data.exec.process_pid,
                        nlcn_msg->nl_body.proc_ev.event_data.exec.process_tgid);
-                */
                 break;
 
             case PROC_EVENT_NONE:
