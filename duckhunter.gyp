@@ -22,6 +22,8 @@
                 'external/libuv/include',
                 'external/libzmq/include',
                 'external/bstring/bstring',
+                'external/glib',
+                'external/glib/glib',
             ],
             'dependencies': [
                 'external/libuv/uv.gyp:libuv',

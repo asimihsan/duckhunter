@@ -36,6 +36,7 @@
 
 #include <bstraux.h>
 #include <bstrlib.h>
+#include <glib.h>
 #include <uv.h>
 #include <zmq.h>
 
