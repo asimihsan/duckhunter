@@ -17,12 +17,16 @@
  * limitations under the License.
  */
 
+/**
+ * https://github.com/bbockelm/lcmaps-plugins-process-tracking/blob/7c837ff/src/proc_police.c
+ */
+
 #include "duckhunter.h"
 
 int create_connector_socket() {
     int conn_sock = socket(PF_NETLINK, SOCK_DGRAM | SOCK_NONBLOCK,
                            NETLINK_CONNECTOR);
-    if (conn_sock == -1) {
+    if (conn_sock < 0) {
         perror("Unable to open proc connector socket!");
         exit(1);
     }
@@ -39,14 +43,85 @@ void select_proc_connector(int conn_sock) {
 }
 
 void set_socket_filter(int conn_sock) {
+    /**
+     *  -   Load (BPF_LD) a halfword, 16 bits (BPF_H) from the absolute
+     *      offset (BPF_ABS) to the nlmsg_type member of the nlmsghdr
+     *      struct. Since that structure should be at the start of the
+     *      message the accumulator now has that value.
+     *  -   Jump (BPF_JMP) if a constant (BPF_K) is equal to (BPF_JEQ) a
+     *      value, remembering to deal with networking ordering. If true
+     *      jump one statement (1), else jump no statements (0).
+     *
+     *      If we do not jump one statement for the first two clauses we
+     *      hit the "return everything" line. This means that if we hit an
+     *      error just throw everything into user space and let it deal with
+     *      the return. However, if we do jump a statement, we continue
+     *      with the processing.
+     *
+     *  -   BPF_RET tells the kernel to return some amount of bytes.
+     *  -   BPF_K means we give this number of bytes as an argument.
+     *  -   0xffffffff means allow the largest possible message size, i.e.
+     *      all of it. If this were 0 the kernel would never wake us up.
+     */
     struct sock_filter filter[] = {
+        /**
+         *  Accept if msg type != NLMSG_DONE.
+         */
+        BPF_STMT(BPF_LD | BPF_H | BPF_ABS,
+                 offsetof(struct nlmsghdr, nlmsg_type)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                 htons(NLMSG_DONE),
+                 1, 0),
+        BPF_STMT(BPF_RET | BPF_K,
+                 0xffffffff),
+
+        /**
+         *  Accept if not from process connector system.
+         */
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, id)
+                                 + offsetof(struct cb_id, idx)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                 htonl(CN_IDX_PROC),
+                 1, 0),
+        BPF_STMT(BPF_RET | BPF_K,
+                 0xffffffff),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, id)
+                                 + offsetof(struct cb_id, val)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                 htonl(CN_VAL_PROC),
+                 1, 0),
+        BPF_STMT(BPF_RET | BPF_K,
+                 0xffffffff),
+
+        /**
+         *  This stanza is unique, in that if do not match the fork event
+         *  we do not jump over a statement which returns nothing. This is
+         *  our first filter!
+         */
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, what)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                 htonl(PROC_EVENT_FORK),
+                 1, 0),
+        BPF_STMT(BPF_RET | BPF_K, 0),
+
+        /**
+         *  All filters matched, so pass on the message to user-space.
+         */
         BPF_STMT(BPF_RET | BPF_K,
                  0xffffffff),
     };
+
     struct sock_fprog fprog;
     fprog.filter = filter;
-    fprog.len = sizeof(filter) / sizeof(filter[0]);
-    setsockopt(conn_sock, SOL_SOCKET, SO_ATTACH_FILTER, &fprog, sizeof(fprog));
+    fprog.len = sizeof filter / sizeof filter[0];
+    if (setsockopt(conn_sock, SOL_SOCKET, SO_ATTACH_FILTER,
+                   &fprog, sizeof(fprog)) < 0) {
+        printf("setting socket filter failed: %s\n", strerror(errno));
+    }
 }
 
 int send_connector_message(int conn_sock, bool enable) {
