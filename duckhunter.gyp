@@ -10,6 +10,7 @@
             'cflags': [
                 '-pedantic',
                 '-Wall',
+                '-std=c11',
             ],
             'sources': [
                 'src/connector.c',
