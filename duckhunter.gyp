@@ -11,6 +11,7 @@
                 '-pedantic',
                 '-Wall',
                 '-std=c11',
+                '-flto',
             ],
             'sources': [
                 'src/connector.c',
@@ -35,6 +36,7 @@
                     '-L../../external/libzmq/src/.libs',
                     '-L../../external/bstring/bstring/.libs',
                     '-L../../external/glib/glib/.libs',
+                    '-flto',
                 ],
             },
         },
