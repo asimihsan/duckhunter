@@ -78,8 +78,7 @@ void set_socket_filter(int conn_sock) {
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
                  htons(NLMSG_DONE),
                  1, 0),
-        BPF_STMT(BPF_RET | BPF_K,
-                 0xffffffff),
+        BPF_STMT(BPF_RET | BPF_K, 0xffffffff),
 
         /**
          *  Accept if not from process connector system.
@@ -90,21 +89,44 @@ void set_socket_filter(int conn_sock) {
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
                  htonl(CN_IDX_PROC),
                  1, 0),
-        BPF_STMT(BPF_RET | BPF_K,
-                 0xffffffff),
+        BPF_STMT(BPF_RET | BPF_K, 0xffffffff),
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
                  NLMSG_LENGTH(0) + offsetof(struct cn_msg, id)
                                  + offsetof(struct cb_id, val)),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
                  htonl(CN_VAL_PROC),
                  1, 0),
-        BPF_STMT(BPF_RET | BPF_K,
-                 0xffffffff),
+        BPF_STMT(BPF_RET | BPF_K, 0xffffffff),
 
         /**
-         *  This stanza is unique, in that if do not match the fork event
-         *  we do not jump over a statement which returns nothing. This is
-         *  our first filter!
+         *  Accept exit messages if it isn't a thread.
+         */
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, what)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                 htonl(PROC_EVENT_EXIT),
+                 0, 7),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, event_data)
+                                 + offsetof(struct exit_proc_event,
+                                            process_pid)),
+        BPF_STMT(BPF_ST, 0),
+        BPF_STMT(BPF_LDX | BPF_W | BPF_MEM, 0),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, event_data)
+                                 + offsetof(struct exit_proc_event,
+                                            process_tgid)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_X,
+                 0,
+                 1, 0),
+        BPF_STMT(BPF_RET | BPF_K, 0),
+        BPF_STMT(BPF_RET | BPF_K, 0xffffffff),
+
+        /**
+         *  Accept fork messages if parent and child are not threads.
          */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
                  NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
@@ -114,11 +136,41 @@ void set_socket_filter(int conn_sock) {
                  1, 0),
         BPF_STMT(BPF_RET | BPF_K, 0),
 
-        /**
-         *  All filters matched, so pass on the message to user-space.
-         */
-        BPF_STMT(BPF_RET | BPF_K,
-                 0xffffffff),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, event_data)
+                                 + offsetof(struct fork_proc_event,
+                                            parent_pid)),
+        BPF_STMT(BPF_ST, 0),
+        BPF_STMT(BPF_LDX | BPF_W | BPF_MEM, 0),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, event_data)
+                                 + offsetof(struct fork_proc_event,
+                                            parent_tgid)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_X,
+                 0,
+                 1, 0),
+        BPF_STMT(BPF_RET | BPF_K, 0),
+
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, event_data)
+                                 + offsetof(struct fork_proc_event,
+                                            child_pid)),
+        BPF_STMT(BPF_ST, 0),
+        BPF_STMT(BPF_LDX | BPF_W | BPF_MEM, 0),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, event_data)
+                                 + offsetof(struct fork_proc_event,
+                                            child_tgid)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_X,
+                 0,
+                 1, 0),
+
+        BPF_STMT(BPF_RET | BPF_K, 0),
+        BPF_STMT(BPF_RET | BPF_K, 0xffffffff),
     };
 
     struct sock_fprog fprog;
@@ -245,13 +297,18 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
                        nlcn_msg->nl_body.proc_ev.event_data.exec.process_tgid);
                 break;
 
+            case PROC_EVENT_EXIT:
+                printf("exit: process pid=%d tgid=%d\n",
+                       nlcn_msg->nl_body.proc_ev.event_data.exec.process_pid,
+                       nlcn_msg->nl_body.proc_ev.event_data.exec.process_tgid);
+                break;
+
             case PROC_EVENT_NONE:
             case PROC_EVENT_UID:
             case PROC_EVENT_GID:
             case PROC_EVENT_SID:
             case PROC_EVENT_PTRACE:
             case PROC_EVENT_COMM:
-            case PROC_EVENT_EXIT:
                 break;
         }
     }
