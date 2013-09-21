@@ -29,10 +29,12 @@
                 'libraries': [
                     '-lzmq',
                     '-lbstring',
+                    '-lglib-2.0',
                 ],
                 'ldflags': [
                     '-L../../external/libzmq/src/.libs',
-                    '-L../../external/bstring/bstring/.libs'
+                    '-L../../external/bstring/bstring/.libs',
+                    '-L../../external/glib/glib/.libs',
                 ],
             },
         },

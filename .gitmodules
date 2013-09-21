@@ -7,3 +7,6 @@
 [submodule "external/bstring"]
 	path = external/bstring
 	url = git@github.com:msteinert/bstring.git
+[submodule "external/glib"]
+	path = external/glib
+	url = git://git.gnome.org/glib

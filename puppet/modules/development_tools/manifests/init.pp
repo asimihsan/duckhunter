@@ -14,13 +14,22 @@ class development_tools {
     ]
     case $operatingsystem {
         ubuntu: {
-            $packages = ["build-essential"]
+            $packages = ["build-essential",
+                         "libffi",
+                         "libffi-dev",
+                         "zlib",
+                         "zlib1g-dev"]
         }
         Fedora: {
             $packages = ["automake",
                          "gcc",
-                         "gcc-c++",                
-                         "make"]
+                         "gcc-c++", 
+                         "libffi",
+                         "libffi-devel",              
+                         "make",
+                         "zlib",
+                         "zlib-devel",
+                         "zlib-static"]
         }
     }
     package { $base_packages: ensure => installed }
