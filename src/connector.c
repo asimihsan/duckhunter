@@ -30,6 +30,12 @@ int create_connector_socket() {
         perror("Unable to open proc connector socket!");
         exit(1);
     }
+
+    unsigned int socket_size = 512 * 1024;
+    if (setsockopt(conn_sock, SOL_SOCKET, SO_RCVBUF, &socket_size,
+                   sizeof(int))) {
+        printf("Unable to increase socket buffer size: %s", strerror(errno));
+    }
     return conn_sock;
 }
 
