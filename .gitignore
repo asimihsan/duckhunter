@@ -15,3 +15,7 @@
 *.exe
 *.out
 *.app
+
+.vagrant
+build
+*.sublime*
