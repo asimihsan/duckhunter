@@ -251,7 +251,7 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
     struct msghdr msghdr;
     struct sockaddr_nl addr;
     struct iovec iov[1];
-    char buf[getpagesize()];
+    char buf[1024];
 
     /**
      *  Netlink allows for multi-part messages, and although the process

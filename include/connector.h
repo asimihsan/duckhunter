@@ -22,7 +22,7 @@
 
 int create_connector_socket();
 void select_proc_connector(int conn_sock);
-void select_socket_filter();
+void set_socket_filter();
 int send_connector_message(int conn_sock, bool enable);
 int send_subscribe_message(int conn_sock);
 int send_unsubscribe_message(int conn_sock);
