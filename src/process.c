@@ -1,13 +1,17 @@
 #include "duckhunter.h"
 
 void process_fork_event(uv_work_t *req) {
+    int rc;
+    const int SIZE = 1024;
     fork_event_baton *baton = (fork_event_baton *)req->data;
-    char buffer[1024];
-    memset(buffer, 0, 1024);
+    char buffer[SIZE];
+    memset(buffer, 0, SIZE);
 
     bstring parent_exe;
     bstring parent_proc_exe = bformat("/proc/%d/exe", baton->parent_pid);
-    if (readlink((char *)parent_proc_exe->data, buffer, 1024) > -1) {
+    rc = readlink((char *)parent_proc_exe->data, buffer, SIZE - 1);
+    if (rc > -1) {
+        buffer[rc] = '\0';
         parent_exe = bfromcstr(buffer);
     } else {
         parent_exe = bfromcstr("<unknown>");
@@ -15,7 +19,9 @@ void process_fork_event(uv_work_t *req) {
 
     bstring child_exe;
     bstring child_proc_exe = bformat("/proc/%d/exe", baton->child_pid);
-    if (readlink((char *)child_proc_exe->data, buffer, 1024) > -1) {
+    rc = readlink((char *)child_proc_exe->data, buffer, SIZE - 1);
+    if (rc > -1) {
+        buffer[rc] = '\0';
         child_exe = bfromcstr(buffer);
     } else {
         child_exe = bfromcstr("<unknown>");
