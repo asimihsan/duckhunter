@@ -284,13 +284,18 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
             continue;
         }
 
+        fork_event_baton *baton;
         switch(nlcn_msg->nl_body.proc_ev.what) {
             case PROC_EVENT_FORK:
-                printf("fork: parent pid=%d tgid=%d -> child pid=%d tgid=%d\n",
-                       nlcn_msg->nl_body.proc_ev.event_data.fork.parent_pid,
-                       nlcn_msg->nl_body.proc_ev.event_data.fork.parent_tgid,
-                       nlcn_msg->nl_body.proc_ev.event_data.fork.child_pid,
-                       nlcn_msg->nl_body.proc_ev.event_data.fork.child_tgid);
+                baton = (fork_event_baton *)calloc(1, 
+                                                   sizeof(fork_event_baton));
+                baton->req.data = (void *)baton;
+                baton->parent_pid = 
+                          nlcn_msg->nl_body.proc_ev.event_data.fork.parent_pid;
+                baton->child_pid =
+                           nlcn_msg->nl_body.proc_ev.event_data.fork.child_pid;
+                uv_queue_work(loop, &(baton->req), process_fork_event,
+                                                           cleanup_fork_event);
                 break;
 
             case PROC_EVENT_EXEC:

@@ -43,5 +43,6 @@
 #include "nlcn_msg.h"
 #include "main.h"
 #include "connector.h"
+#include "process.h"
 
 #endif

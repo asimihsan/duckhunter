@@ -34,11 +34,11 @@ int main() {
     uv_signal_t signal;
 
     loop = uv_default_loop();
-    uv_signal_init(loop, &signal);
-    uv_signal_start(&signal, on_sigint, SIGINT);
     conn_sock = create_connector_socket();
     set_socket_filter(conn_sock);
     context = create_connector_context(conn_sock);
+    uv_signal_init(loop, &signal);
+    uv_signal_start(&signal, on_sigint, SIGINT);
 
     select_proc_connector(conn_sock);
     if (send_subscribe_message(conn_sock) == -1) {

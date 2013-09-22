@@ -18,6 +18,7 @@
             'sources': [
                 'src/connector.c',
                 'src/main.c',
+                'src/process.c',
             ],
             'include_dirs': [
                 'include',
