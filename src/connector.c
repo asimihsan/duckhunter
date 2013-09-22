@@ -100,6 +100,33 @@ void set_socket_filter(int conn_sock) {
         BPF_STMT(BPF_RET | BPF_K, 0xffffffff),
 
         /**
+         *  Accept exec messages if it isn't a thread.
+         */
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, what)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                 htonl(PROC_EVENT_EXEC),
+                 0, 7),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, event_data)
+                                 + offsetof(struct exec_proc_event,
+                                            process_pid)),
+        BPF_STMT(BPF_ST, 0),
+        BPF_STMT(BPF_LDX | BPF_W | BPF_MEM, 0),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+                 NLMSG_LENGTH(0) + offsetof(struct cn_msg, data)
+                                 + offsetof(struct proc_event, event_data)
+                                 + offsetof(struct exec_proc_event,
+                                            process_tgid)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_X,
+                 0,
+                 1, 0),
+        BPF_STMT(BPF_RET | BPF_K, 0),
+        BPF_STMT(BPF_RET | BPF_K, 0xffffffff),
+
+        /**
          *  Accept exit messages if it isn't a thread.
          */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
