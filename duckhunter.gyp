@@ -13,7 +13,7 @@
                 '-std=c11',
                 '-flto',
                 '-g',
-                '-O0',
+                '-O2',
             ],
             'sources': [
                 'src/connector.c',

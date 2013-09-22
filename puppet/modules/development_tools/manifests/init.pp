@@ -9,6 +9,8 @@ class development_tools {
     $base_packages = [
         "git",
         "htop",
+        "ruby",
+        "rubygems",
         "subversion",
         "valgrind",
         "wget",
@@ -35,4 +37,9 @@ class development_tools {
     }
     package { $base_packages: ensure => installed }
     package { $packages: ensure => installed }
+
+    exec { "gem install fpm":
+        unless => "gem list | egrep ^fpm",
+        require => Package["rubygems"],
+    }
 }

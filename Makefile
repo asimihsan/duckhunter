@@ -1,3 +1,6 @@
+NAME=duckhunter
+VERSION=0.0.1
+
 all: duckhunter
 
 duckhunter: ./build/makefiles/Makefile
@@ -6,7 +9,8 @@ duckhunter: ./build/makefiles/Makefile
 deps: libzmq libbstring libglib
 
 ./build/makefiles/Makefile:
-	@gyp duckhunter.gyp --depth=. -f make --generator-output=./build/makefiles -Dlibrary=static_library
+	@gyp duckhunter.gyp --depth=. -f make \ 
+		--generator-output=./build/makefiles -Dlibrary=static_library
 
 ./external/libzmq/Makefile.in: 
 	cd external/libzmq; ./autogen.sh
@@ -21,7 +25,8 @@ libzmq: ./external/libzmq/config.status
 	cd external/bstring; autoreconf -i
 
 ./external/bstring/config.status: ./external/bstring/Makefile.in
-	cd external/bstring; ./configure --enable-static --disable-shared --with-pic
+	cd external/bstring; ./configure --enable-static --disable-shared \
+		--with-pic
 
 libbstring: ./external/bstring/config.status
 	cd external/bstring; make
@@ -36,7 +41,8 @@ libglib: ./external/glib/config.status
 	cd external/glib; make
 
 test: duckhunter
-	@valgrind --track-origins=yes --leak-check=full build/makefiles/out/Default/duckhunter
+	@valgrind --track-origins=yes --leak-check=full \
+		build/makefiles/out/Default/duckhunter
 
 clean:
 	rm -rf ./build	
@@ -46,3 +52,27 @@ distclean: clean
 	cd external/libzmq; rm -f Makefile.in
 	-cd external/bstring; make distclean
 	cd external/bstring; rm -f Makefile.in
+
+package-deps: 
+	if [ ! -d packages ]; then \
+		mkdir packages; \
+	fi; \
+	if [ -d /tmp/installdir ]; then \
+		rm -rf /tmp/installdir; \
+	fi; \
+	mkdir -p /tmp/installdir/usr/local/bin; \
+	cp build/makefiles/out/Default/duckhunter /tmp/installdir/usr/local/bin/duckhunter
+
+rpm: duckhunter package-deps
+	fpm -s dir -t rpm -n $(NAME) -v $(VERSION) -C /tmp/installdir \
+		--package packages/duckhunter-VERSION_ARCH.rpm \
+		--depends "libstdc++" \
+		--force \
+		usr
+
+deb: duckhunter package-deps
+	fpm -s dir -t deb -n $(NAME) -v $(VERSION) -C /tmp/installdir \
+		--package packages/duckhunter-VERSION_ARCH.deb \
+		--depends "libstdc++" \
+		--force \
+		usr

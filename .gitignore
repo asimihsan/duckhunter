@@ -19,3 +19,4 @@
 .vagrant
 build
 *.sublime*
+packages
