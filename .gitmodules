@@ -6,7 +6,7 @@
 	url = git@github.com:joyent/libuv.git
 [submodule "external/bstring"]
 	path = external/bstring
-	url = git@github.com:msteinert/bstring.git
+	url = git@github.com:asimihsan/bstring.git
 [submodule "external/glib"]
 	path = external/glib
 	url = git://git.gnome.org/glib
