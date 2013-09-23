@@ -62,8 +62,8 @@ package-deps:
 	if [ -d /tmp/installdir ]; then \
 		rm -rf /tmp/installdir; \
 	fi; \
-	mkdir -p /tmp/installdir/usr/local/bin; \
-	cp build/makefiles/out/Default/duckhunter /tmp/installdir/usr/local/bin/duckhunter
+	mkdir -p /tmp/installdir/usr/bin; \
+	cp build/makefiles/out/Default/duckhunter /tmp/installdir/usr/bin/duckhunter
 
 rpm: duckhunter package-deps
 	fpm -s dir -t rpm -n $(NAME) -v $(VERSION) -C /tmp/installdir \
