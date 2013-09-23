@@ -33,11 +33,13 @@
             ],
             'link_settings': {
                 'libraries': [
+                    #'-ljemalloc',
                     '-lzmq',
                     '-lbstring',
                     '-lglib-2.0',
                 ],
                 'ldflags': [
+                    #'-L../../external/jemalloc/lib',
                     '-L../../external/libzmq/src/.libs',
                     '-L../../external/bstring/bstring/.libs',
                     '-L../../external/glib/glib/.libs',

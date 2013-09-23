@@ -40,8 +40,18 @@ libbstring: ./external/bstring/config.status
 libglib: ./external/glib/config.status
 	cd external/glib; make
 
+./external/jemalloc/Makefile.in:
+	cd external/jemalloc; ./autogen.sh
+
+./external/jemalloc/config.status: ./external/jemalloc/Makefile.in
+	cd external/jemalloc; \
+	./configure
+
+libjemalloc: ./external/jemalloc/config.status
+	cd external/jemalloc; make build_lib_static
+
 test: duckhunter
-	@valgrind --track-origins=yes --leak-check=full --dsymutil=yes \
+	@valgrind --track-origins=yes --leak-check=full \
 		build/makefiles/out/Default/duckhunter
 
 clean:
@@ -54,6 +64,8 @@ distclean: clean
 	cd external/bstring; rm -f Makefile.in
 	-cd external/glib; make distclean
 	cd external/glib; rm -f Makefile.in
+	-cd external/jemalloc; make distclean
+	cd external/jemalloc; rm -f Makefile.in
 
 package-deps: 
 	if [ ! -d packages ]; then \

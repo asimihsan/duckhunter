@@ -10,3 +10,6 @@
 [submodule "external/glib"]
 	path = external/glib
 	url = git://git.gnome.org/glib
+[submodule "external/jemalloc"]
+	path = external/jemalloc
+	url = git://canonware.com/jemalloc.git
