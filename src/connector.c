@@ -311,40 +311,7 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
             continue;
         }
 
-        fork_event_baton *baton;
-        switch(nlcn_msg->nl_body.proc_ev.what) {
-            case PROC_EVENT_FORK:
-                baton = (fork_event_baton *)calloc(1, 
-                                                   sizeof(fork_event_baton));
-                baton->req.data = (void *)baton;
-                baton->parent_pid = 
-                          nlcn_msg->nl_body.proc_ev.event_data.fork.parent_pid;
-                baton->child_pid =
-                           nlcn_msg->nl_body.proc_ev.event_data.fork.child_pid;
-                uv_queue_work(loop, &(baton->req), process_fork_event,
-                                                           cleanup_fork_event);
-                break;
-
-            case PROC_EVENT_EXEC:
-                printf("exec: process pid=%d tgid=%d\n",
-                       nlcn_msg->nl_body.proc_ev.event_data.exec.process_pid,
-                       nlcn_msg->nl_body.proc_ev.event_data.exec.process_tgid);
-                break;
-
-            case PROC_EVENT_EXIT:
-                printf("exit: process pid=%d tgid=%d\n",
-                       nlcn_msg->nl_body.proc_ev.event_data.exec.process_pid,
-                       nlcn_msg->nl_body.proc_ev.event_data.exec.process_tgid);
-                break;
-
-            case PROC_EVENT_NONE:
-            case PROC_EVENT_UID:
-            case PROC_EVENT_GID:
-            case PROC_EVENT_SID:
-            case PROC_EVENT_PTRACE:
-            case PROC_EVENT_COMM:
-                break;
-        }
+        start_processing_event(nlcn_msg);
     }
 }
 
