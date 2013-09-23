@@ -21,6 +21,7 @@ git submodule update
 vagrant up fedora-18-x86_64
 vagrant ssh fedora-18-x86_64
 cd /vagrant
+make deps
 make duckhunter
 
 ./build/makefiles/out/Default/duckhunter
