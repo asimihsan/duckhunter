@@ -52,6 +52,8 @@ distclean: clean
 	cd external/libzmq; rm -f Makefile.in
 	-cd external/bstring; make distclean
 	cd external/bstring; rm -f Makefile.in
+	-cd external/glib; make distclean
+	cd external/glib; rm -f Makefile.in
 
 package-deps: 
 	if [ ! -d packages ]; then \
