@@ -9,7 +9,7 @@ duckhunter: ./build/makefiles/Makefile
 deps: libzmq libbstring libglib
 
 ./build/makefiles/Makefile:
-	@gyp duckhunter.gyp --depth=. -f make \ 
+	@gyp duckhunter.gyp --depth=. -f make \
 		--generator-output=./build/makefiles -Dlibrary=static_library
 
 ./external/libzmq/Makefile.in: 
