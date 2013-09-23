@@ -1,8 +1,7 @@
 #include "duckhunter.h"
 
 void start_processing_event(nlcn_ev_msg * nlcn_msg) {
-    proc_event_baton_t *baton = 
-                   (proc_event_baton_t *)calloc(1, sizeof(proc_event_baton_t));
+    proc_event_baton_t *baton = g_slice_new0(proc_event_baton_t);
     baton->req.data = (void *)baton;
     switch(nlcn_msg->nl_body.proc_ev.what) {
         case PROC_EVENT_FORK:
@@ -384,6 +383,6 @@ void on_finished_processing_event(proc_event_baton_t **baton_pp) {
     bdestroy(baton_p->process_exe);
     bdestroy(baton_p->process_proc_cmdline);
     bdestroy(baton_p->process_cmdline);
-    free(*baton_pp);
+    g_slice_free(proc_event_baton_t, *baton_pp);
     *baton_pp = NULL;
 }
