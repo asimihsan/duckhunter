@@ -19,7 +19,7 @@ deps: libzmq libbstring libglib
 	cd external/libzmq; ./configure --enable-static --disable-shared --with-pic
 
 libzmq: ./external/libzmq/config.status
-	cd external/libzmq; make
+	cd external/libzmq; make CFLAGS="-flto" CPPFLAGS="-flto" LDFLAGS="-flto"
 
 ./external/bstring/Makefile.in:
 	cd external/bstring; autoreconf -i
@@ -29,7 +29,7 @@ libzmq: ./external/libzmq/config.status
 		--with-pic
 
 libbstring: ./external/bstring/config.status
-	cd external/bstring; make
+	cd external/bstring; make CFLAGS="-flto" CPPFLAGS="-flto" LDFLAGS="-flto"
 
 ./external/glib/Makefile.in:
 	cd external/glib; ./autogen.sh
@@ -38,7 +38,7 @@ libbstring: ./external/bstring/config.status
 	cd external/glib; ./configure --enable-static --disable-shared --with-pic
 
 libglib: ./external/glib/config.status
-	cd external/glib; make
+	cd external/glib; make CFLAGS="-flto" CPPFLAGS="-flto" LDFLAGS="-flto"
 
 ./external/jemalloc/Makefile.in:
 	cd external/jemalloc; ./autogen.sh
@@ -48,7 +48,8 @@ libglib: ./external/glib/config.status
 	./configure
 
 libjemalloc: ./external/jemalloc/config.status
-	cd external/jemalloc; make build_lib_static
+	cd external/jemalloc; \
+	make build_lib_static CFLAGS="-flto" CPPFLAGS="-flto" LDFLAGS="-flto"
 
 test: duckhunter
 	@valgrind --track-origins=yes --leak-check=full \
