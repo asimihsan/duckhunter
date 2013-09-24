@@ -78,10 +78,15 @@ package-deps:
 	mkdir -p /tmp/installdir/usr/bin; \
 	cp build/makefiles/out/Default/duckhunter /tmp/installdir/usr/bin/duckhunter
 
+# In order to get the dependencies run on e.g. Fedora:
+# ldd /usr/bin/duckhunter | awk '{print $3}' | xargs yum whatprovides | perl -ne 'printf "%s\n", $1 if /^(.*?)-.*? : .*$/' | sort | uniq
+
 rpm: duckhunter package-deps
 	fpm -s dir -t rpm -n $(NAME) -v $(VERSION) -C /tmp/installdir \
 		--package packages/duckhunter-VERSION_ARCH.rpm \
 		--depends "libstdc++" \
+		--depends "libgcc" \
+		--depends "glibc" \
 		--force \
 		usr
 
