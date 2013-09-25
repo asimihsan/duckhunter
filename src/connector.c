@@ -30,12 +30,6 @@ int create_connector_socket() {
         perror("Unable to open proc connector socket!");
         exit(1);
     }
-
-    unsigned int socket_size = 512 * 1024;
-    if (setsockopt(conn_sock, SOL_SOCKET, SO_RCVBUF, &socket_size,
-                   sizeof(int))) {
-        printf("Unable to increase socket buffer size: %s", strerror(errno));
-    }
     return conn_sock;
 }
 
@@ -251,7 +245,7 @@ void handle_connector_event(uv_poll_t *req, int status, int events) {
     struct msghdr msghdr;
     struct sockaddr_nl addr;
     struct iovec iov[1];
-    char buf[1024];
+    char buf[sizeof(nlcn_ev_msg)];
 
     /**
      *  Netlink allows for multi-part messages, and although the process

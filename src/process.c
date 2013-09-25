@@ -81,19 +81,28 @@ void append_bstring_with_null_delimited_cstr(bstring *output,
                                              char *buffer,
                                              int size) {
     bstring b0 = bfromcstralloc(size, "");
-    struct bstrList *lines;
+    struct bstrList *lines = NULL;
     if (!(*output)) {
-        *output = bfromcstralloc(size * 2, "");
+        *output = bfromcstralloc(size, "");
     }
-    if (BSTR_ERR != bassignblk(b0, buffer, size)) {
-        if (NULL != (lines = bsplit(b0, '\0'))) {
-            for (int i = 0; i < lines->qty; i++) {
-                bcatcstr(*output, bdata(lines->entry[i]));
-                bcatcstr(*output, " ");
-            }
-            btrimws(*output);
-            bstrListDestroy(lines);
+    if (BSTR_ERR == bassignblk(b0, buffer, size)) {
+        goto EXIT_LABEL;
+    }
+    if (NULL == (lines = bsplit(b0, '\0'))) {
+        goto EXIT_LABEL;
+    }
+    const int lines_size = lines->qty;
+    for (int i = 0; i < lines_size; i++) {
+        bcatcstr(*output, bdata(lines->entry[i]));
+        if (i != (lines_size - 1)) {
+            bcatcstr(*output, " ");
         }                    
+    }    
+
+EXIT_LABEL:
+
+    if (lines) {
+        bstrListDestroy(lines);
     }
     bdestroy(b0);
 }
@@ -347,6 +356,8 @@ void on_finished_processing_event(proc_event_baton_t **baton_pp) {
     proc_event_baton_t *baton_p = *baton_pp;
     switch(baton_p->event) {
         case FORK:
+            btrimws(baton_p->parent_cmdline);
+            btrimws(baton_p->child_cmdline);
             printf("fork. parent (exe=%s) (cmdline=%s) (pid=%d) -> child (exe=%s) (cmdline=%s) (pid=%d)\n",
                    bdatae(baton_p->parent_exe, "<out of memory>"),
                    bdatae(baton_p->parent_cmdline, "<out of memory>"),
@@ -357,6 +368,7 @@ void on_finished_processing_event(proc_event_baton_t **baton_pp) {
             break;
 
         case EXEC:
+            btrimws(baton_p->process_cmdline);
             printf("exec. process (exe=%s) (cmdline=%s) (pid=%d)\n",
                    bdatae(baton_p->process_exe, "<out of memory>"),
                    bdatae(baton_p->process_cmdline, "<out of memory>"),
@@ -364,6 +376,7 @@ void on_finished_processing_event(proc_event_baton_t **baton_pp) {
             break;
 
         case EXIT:
+            btrimws(baton_p->process_cmdline);
             printf("exit. process (exe=%s) (cmdline=%s) (pid=%d)\n",
                    bdatae(baton_p->process_exe, "<out of memory>"),
                    bdatae(baton_p->process_cmdline, "<out of memory>"),
