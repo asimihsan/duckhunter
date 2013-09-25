@@ -1,22 +1,79 @@
 #include "duckhunter.h"
 
+void process_event(uv_work_t *req) {
+    uv_fs_t fs_req;
+    proc_event_baton_t *baton = (proc_event_baton_t *)req->data;
+    switch(baton->event) {
+        case FORK:
+            baton->parent_proc_exe = bformat("/proc/%d/exe",
+                                             baton->parent_pid);
+            baton->parent_proc_cmdline = bformat("/proc/%d/cmdline",
+                                                 baton->parent_pid);
+
+            baton->child_proc_exe = bformat("/proc/%d/exe",
+                                            baton->child_pid);
+            baton->child_proc_cmdline = bformat("/proc/%d/cmdline",
+                                                baton->parent_pid);
+            baton->operation = UPDATE_PARENT_EXE;
+            uv_fs_readlink(loop,
+                           &fs_req,
+                           bdatae(baton->parent_proc_exe, "<out of memory>"),
+                           NULL);
+            update_baton_fields(baton);
+            uv_fs_req_cleanup(&fs_req);
+            baton->operation = UPDATE_CHILD_EXE;
+            uv_fs_readlink(loop,
+                           &fs_req,
+                           bdatae(baton->child_proc_exe, "<out of memory>"),
+                           NULL);
+            update_baton_fields(baton);
+            uv_fs_req_cleanup(&fs_req);
+            break;
+
+        case EXEC:
+        case EXIT:
+            baton->process_proc_exe = bformat("/proc/%d/exe",
+                                              baton->process_pid);
+            baton->process_proc_cmdline = bformat("/proc/%d/cmdline",
+                                                  baton->process_pid);
+            baton->operation = UPDATE_PROCESS_EXE;
+            uv_fs_readlink(loop,
+                           &fs_req,
+                           bdatae(baton->process_proc_exe, "<out of memory>"),
+                           NULL);            
+            update_baton_fields(baton);
+            uv_fs_req_cleanup(&fs_req);
+            break;
+    }
+}
+
+void cleanup_event(uv_work_t *req, int status) {    
+    proc_event_baton_t *baton = (proc_event_baton_t *)req->data;
+    on_finished_processing_event(&baton);
+}
+
 void start_processing_event(nlcn_ev_msg * nlcn_msg) {
     proc_event_baton_t *baton = g_slice_new0(proc_event_baton_t);
     baton->req.data = (void *)baton;
     switch(nlcn_msg->nl_body.proc_ev.what) {
         case PROC_EVENT_FORK:
             baton->event = FORK;
-            baton->operation = UPDATE_PARENT_EXE;
+            baton->parent_pid = 
+                          nlcn_msg->nl_body.proc_ev.event_data.fork.parent_pid;
+            baton->child_pid =
+                           nlcn_msg->nl_body.proc_ev.event_data.fork.child_pid;
             break;
 
         case PROC_EVENT_EXEC:
             baton->event = EXEC;
-            baton->operation = UPDATE_PROCESS_EXE;
+            baton->process_pid =
+                         nlcn_msg->nl_body.proc_ev.event_data.exec.process_pid;
             break;
 
         case PROC_EVENT_EXIT:
             baton->event = EXIT;
-            baton->operation = UPDATE_PROCESS_EXE;
+            baton->process_pid =
+                         nlcn_msg->nl_body.proc_ev.event_data.exec.process_pid;
             break;
 
         case PROC_EVENT_NONE:
@@ -28,53 +85,7 @@ void start_processing_event(nlcn_ev_msg * nlcn_msg) {
             assert(1);
             break;
     }
-
-    switch (baton->operation) {
-        case UPDATE_PARENT_EXE:
-            baton->parent_pid = 
-                          nlcn_msg->nl_body.proc_ev.event_data.fork.parent_pid;
-            baton->parent_proc_exe = bformat("/proc/%d/exe",
-                                             baton->parent_pid);
-            baton->parent_proc_cmdline = bformat("/proc/%d/cmdline",
-                                                 baton->parent_pid);
-            baton->child_pid =
-                           nlcn_msg->nl_body.proc_ev.event_data.fork.child_pid;
-            baton->child_proc_exe = bformat("/proc/%d/exe",
-                                            baton->child_pid);
-            baton->child_proc_cmdline = bformat("/proc/%d/cmdline",
-                                                baton->parent_pid);
-            uv_fs_readlink(loop,
-                           (uv_fs_t *)baton,
-                           bdatae(baton->parent_proc_exe, "<out of memory>"),
-                           on_fs_event_processed);
-            break;
-
-        case UPDATE_PROCESS_EXE:
-            baton->process_pid =
-                         nlcn_msg->nl_body.proc_ev.event_data.exec.process_pid;
-            baton->process_proc_exe = bformat("/proc/%d/exe",
-                                              baton->process_pid);
-            baton->process_proc_cmdline = bformat("/proc/%d/cmdline",
-                                                  baton->process_pid);
-            uv_fs_readlink(loop,
-                           (uv_fs_t *)baton,
-                           bdatae(baton->process_proc_exe, "<out of memory>"),
-                           on_fs_event_processed);
-            break;
-
-        case UPDATE_CHILD_EXE:
-        case UPDATE_PARENT_CMDLINE_OPEN:
-        case UPDATE_PARENT_CMDLINE_READ:
-        case UPDATE_PARENT_CMDLINE_CLOSE:
-        case UPDATE_CHILD_CMDLINE_OPEN:
-        case UPDATE_CHILD_CMDLINE_READ:
-        case UPDATE_CHILD_CMDLINE_CLOSE:
-        case UPDATE_PROCESS_CMDLINE_OPEN:
-        case UPDATE_PROCESS_CMDLINE_READ:
-        case UPDATE_PROCESS_CMDLINE_CLOSE:
-            assert(1);
-            break;
-    }
+    uv_queue_work(loop, &baton->req, process_event, cleanup_event);
 }
 
 void append_bstring_with_null_delimited_cstr(bstring *output,

@@ -24,7 +24,7 @@ typedef enum {
 } operation_t;
 
 typedef struct {
-    uv_fs_t req;
+    uv_work_t req;
     event_t event;
     operation_t operation;
 
@@ -50,6 +50,8 @@ typedef struct {
     bstring process_cmdline;
 } proc_event_baton_t;
 
+void process_event(uv_work_t *req);
+void cleanup_event(uv_work_t *req, int status);
 void start_processing_event(nlcn_ev_msg * nlcn_msg);
 void on_fs_event_processed(uv_fs_t *req);
 void on_finished_processing_event(proc_event_baton_t **baton_pp);
