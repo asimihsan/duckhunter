@@ -26,3 +26,6 @@ make duckhunter
 
 ./build/makefiles/out/Default/duckhunter
 ```
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/asimihsan/duckhunter/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
